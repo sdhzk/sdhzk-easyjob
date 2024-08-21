@@ -120,23 +120,31 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         logger.info("加载easyjob定时任务成功");
     }
 
-    public void stopTask(String jobKey) {
+    public boolean stopTask(String jobKey) {
         ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(jobKey);
-        if (Objects.nonNull(scheduledFuture)) {
-            scheduledFuture.cancel(false);
+        if (Objects.nonNull(scheduledFuture)
+                && !scheduledFuture.isCancelled()
+                && !scheduledFuture.isDone()) {
             scheduledFutureMap.remove(jobKey);
             jobMap.remove(jobKey);
+            boolean result = scheduledFuture.cancel(true);
             logger.info("停用easyjob定时任务:{}", jobKey);
+            return result;
         }
+        return false;
     }
 
     public void clear() {
         if (!scheduledFutureMap.isEmpty()) {
-            scheduledFutureMap.values().forEach(scheduledFuture -> scheduledFuture.cancel(false));
+            scheduledFutureMap.values().forEach(scheduledFuture -> scheduledFuture.cancel(true));
         }
         scheduledFutureMap.clear();
         jobMap.clear();
         logger.info("清除全部easyjob定时任务成功");
+    }
+
+    public boolean hasJob(String jobKey) {
+        return scheduledFutureMap.containsKey(jobKey);
     }
 
     public void refresh() {
