@@ -12,6 +12,6 @@ import org.springframework.stereotype.Component;
 public class MyAppSchedulingLogProcessor implements SchedulingLogProcessor {
     @Override
     public void process(SchedulingLog log) {
-        System.out.println("接受到日志：" + log);
+        System.out.println("接收到日志：" + log);
     }
 }
