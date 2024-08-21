@@ -12,6 +12,7 @@ import java.util.Enumeration;
 public class NetworkUtils {
 
     private NetworkUtils() {
+
     }
 
 

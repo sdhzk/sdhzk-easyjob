@@ -24,7 +24,6 @@ import org.springframework.core.env.Environment;
  * @author Linus.Lee
  * @date 2024-8-20
  */
-
 @Configuration(
         proxyBeanMethods = false
 )

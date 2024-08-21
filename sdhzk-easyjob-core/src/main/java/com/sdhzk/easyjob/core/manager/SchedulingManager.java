@@ -8,7 +8,6 @@ import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
@@ -81,7 +80,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         registrar.setScheduler(new ConcurrentTaskScheduler(newScheduledExecutor()));
         this.registrar = registrar;
-        if(this.needStarted){
+        if (this.needStarted) {
             this.start();
         }
     }

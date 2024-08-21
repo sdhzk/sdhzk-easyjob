@@ -19,7 +19,7 @@ public class MyJob extends SchedulingJobAdapter {
 
     @Override
     public void execute() {
-        System.out.println("执行MyJob："+ LocalDateTime.now());
+        System.out.println("执行MyJob：" + LocalDateTime.now());
     }
 
     public void setJobKey(String jobKey) {

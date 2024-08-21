@@ -17,7 +17,7 @@ public class SchedulingLogEventListener implements ApplicationListener<Schedulin
     @Override
     public void onApplicationEvent(SchedulingLog log) {
         SchedulingLogProcessor logProcessor = schedulingLogProcessor.getIfAvailable();
-        if(logProcessor != null){
+        if (logProcessor != null) {
             logProcessor.process(log);
         }
     }
