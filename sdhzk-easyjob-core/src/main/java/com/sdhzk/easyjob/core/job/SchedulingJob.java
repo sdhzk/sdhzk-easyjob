@@ -19,4 +19,6 @@ public interface SchedulingJob extends Runnable {
     String getCron();
 
     boolean enabled();
+
+    boolean logEnabled();
 }

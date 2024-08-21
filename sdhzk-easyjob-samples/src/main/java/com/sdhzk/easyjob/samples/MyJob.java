@@ -2,7 +2,6 @@ package com.sdhzk.easyjob.samples;
 
 import com.sdhzk.easyjob.core.job.SchedulingJobAdapter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -15,7 +14,13 @@ public class MyJob extends SchedulingJobAdapter {
     private String jobName;
     private Map<String, Object> jobParams;
     private String cron;
-    private Boolean status;
+    private Boolean status = Boolean.FALSE;
+    private Boolean logEnabled = Boolean.FALSE;
+
+    @Override
+    public void execute() {
+        System.out.println("执行MyJob："+ LocalDateTime.now());
+    }
 
     public void setJobKey(String jobKey) {
         this.jobKey = jobKey;
@@ -41,9 +46,12 @@ public class MyJob extends SchedulingJobAdapter {
         this.status = status;
     }
 
-    @Override
-    public void execute() {
-        System.out.println("执行MyJob："+ LocalDateTime.now());
+    public Boolean getLogEnabled() {
+        return logEnabled;
+    }
+
+    public void setLogEnabled(Boolean logEnabled) {
+        this.logEnabled = logEnabled;
     }
 
     @Override
@@ -69,5 +77,10 @@ public class MyJob extends SchedulingJobAdapter {
     @Override
     public boolean enabled() {
         return this.status;
+    }
+
+    @Override
+    public boolean logEnabled() {
+        return this.logEnabled;
     }
 }

@@ -21,6 +21,7 @@ public class MyAppSchedulingJobLoader implements SchedulingJobLoader {
         myJob.setJobParams(null);
         myJob.setCron("0/10 * * * * ?");
         myJob.setStatus(true);
+        myJob.setLogEnabled(true);
         return List.of(myJob);
     }
 }

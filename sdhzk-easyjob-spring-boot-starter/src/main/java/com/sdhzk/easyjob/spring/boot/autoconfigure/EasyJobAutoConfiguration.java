@@ -2,8 +2,11 @@ package com.sdhzk.easyjob.spring.boot.autoconfigure;
 
 import com.sdhzk.easyjob.core.leader.SchedulingLeaderSelector;
 import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
+import com.sdhzk.easyjob.core.log.SchedulingLogEventListener;
+import com.sdhzk.easyjob.core.log.SchedulingLogProcessor;
 import com.sdhzk.easyjob.core.manager.SchedulingManager;
 import com.sdhzk.easyjob.core.util.NetworkUtils;
+import com.sdhzk.easyjob.core.util.SpringContextUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -102,5 +105,17 @@ public class EasyJobAutoConfiguration {
         leaderSelector.start();
         logger.info("启动EasyJob成功");
         return leaderSelector;
+    }
+
+    @ConditionalOnMissingBean(SpringContextUtils.class)
+    @Bean
+    public SpringContextUtils springContextUtils() {
+        return new SpringContextUtils();
+    }
+
+    @ConditionalOnMissingBean(SchedulingLogEventListener.class)
+    @Bean
+    public SchedulingLogEventListener schedulingLogEventListener(ObjectProvider<SchedulingLogProcessor> schedulingLogProcessor) {
+        return new SchedulingLogEventListener(schedulingLogProcessor);
     }
 }
