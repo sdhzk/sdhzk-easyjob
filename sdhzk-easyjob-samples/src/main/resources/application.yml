@@ -1,0 +1,18 @@
+easyjob:
+  enabled: true
+  preferred-networks: 172.18.179
+  thread-pool:
+    core-pool-size: 8
+    max-pool-size: 8
+    keep-alive-seconds: 0
+  cluster:
+    name: mycloud
+    app-id: myapp
+    enabled: true
+  zk:
+    connectionString: ${zk.connectionString}
+    baseSleepTimeMs: 1000
+    maxRetries: 3
+
+
+
