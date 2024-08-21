@@ -29,45 +29,44 @@ import org.springframework.core.env.Environment;
 )
 @ConditionalOnProperty(
         name = "easyjob.enabled",
-        matchIfMissing = true
+        matchIfMissing = true,
+        havingValue = "true"
 )
 @EnableConfigurationProperties(EasyJobProperties.class)
 public class EasyJobAutoConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(EasyJobAutoConfiguration.class);
 
+    @ConditionalOnMissingBean(SchedulingManager.class)
     @Bean
     public SchedulingManager schedulingManager(EasyJobProperties properties, ObjectProvider<SchedulingJobLoader> schedulingJobLoader) {
-        SchedulingManager schedulingManager = new SchedulingManager();
-
         if (schedulingJobLoader.getIfAvailable() == null) {
             throw new IllegalStateException("SchedulingJobLoader不能为空");
         }
-
+        SchedulingManager schedulingManager = new SchedulingManager();
         schedulingManager.setSchedulingJobLoader(schedulingJobLoader.getIfAvailable());
         schedulingManager.setNeedStarted(!properties.getCluster().getEnabled());
-        if (properties.getThreadPool() != null) {
-            if (properties.getThreadPool().getCorePoolSize() != null) {
-                if (properties.getThreadPool().getCorePoolSize() < 1) {
-                    throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize必须大于0");
-                }
-                schedulingManager.setCorePoolSize(properties.getThreadPool().getCorePoolSize());
+        if (properties.getThreadPool().getCorePoolSize() != null) {
+            if (properties.getThreadPool().getCorePoolSize() < 1) {
+                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize必须大于0");
             }
-            if (properties.getThreadPool().getMaxPoolSize() != null) {
-                if (properties.getThreadPool().getCorePoolSize() < 1) {
-                    throw new IllegalArgumentException("easyjob.thread-pool.maxPoolSize必须大于0");
-                }
-                if (properties.getThreadPool().getCorePoolSize() != null && properties.getThreadPool().getCorePoolSize() > properties.getThreadPool().getMaxPoolSize()) {
-                    throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize不能大于easyjob.thread-pool.maxPoolSize");
-                }
-                schedulingManager.setMaxPoolSize(properties.getThreadPool().getMaxPoolSize());
+            schedulingManager.setCorePoolSize(properties.getThreadPool().getCorePoolSize());
+        }
+        if (properties.getThreadPool().getMaxPoolSize() != null) {
+            if (properties.getThreadPool().getCorePoolSize() < 1) {
+                throw new IllegalArgumentException("easyjob.thread-pool.maxPoolSize必须大于0");
             }
-            if (properties.getThreadPool().getKeepAliveSeconds() != null) {
-                if (properties.getThreadPool().getKeepAliveSeconds() < 0) {
-                    throw new IllegalArgumentException("easyjob.thread-pool.keepAliveSeconds不能是负数");
-                }
-                schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
+            if (properties.getThreadPool().getCorePoolSize() != null
+                    && properties.getThreadPool().getCorePoolSize() > properties.getThreadPool().getMaxPoolSize()) {
+                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize不能大于easyjob.thread-pool.maxPoolSize");
             }
+            schedulingManager.setMaxPoolSize(properties.getThreadPool().getMaxPoolSize());
+        }
+        if (properties.getThreadPool().getKeepAliveSeconds() != null) {
+            if (properties.getThreadPool().getKeepAliveSeconds() < 0) {
+                throw new IllegalArgumentException("easyjob.thread-pool.keepAliveSeconds不能是负数");
+            }
+            schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
         }
         return schedulingManager;
     }
