@@ -1,8 +1,10 @@
 package com.sdhzk.easyjob.core.manager;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.sdhzk.easyjob.core.config.SchedulingConfig;
 import com.sdhzk.easyjob.core.job.SchedulingJob;
 import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
 import org.slf4j.Logger;
@@ -29,6 +31,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     private final Map<String, SchedulingJob> jobMap = Maps.newConcurrentMap();
     private ScheduledTaskRegistrar registrar;
     private SchedulingJobLoader schedulingJobLoader;
+    private CountDownLatch waitForInit = new CountDownLatch(1);
+    private volatile boolean initialized = false;
 
     private boolean needStarted = false;
 
@@ -80,6 +84,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         registrar.setScheduler(new ConcurrentTaskScheduler(newScheduledExecutor()));
         this.registrar = registrar;
+        waitForInit.countDown();
         if (this.needStarted) {
             this.start();
         }
@@ -97,6 +102,14 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public void start() {
+        if (!initialized) {
+            try {
+                waitForInit.await();
+                initialized = true;
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
         List<SchedulingJob> list = this.schedulingJobLoader.load();
         if (CollectionUtils.isEmpty(list)) {
             clear();
@@ -108,30 +121,97 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
                     logger.warn("easyjob定时任务cron表达式不合法：{}", job);
                     return;
                 }
-                ScheduledFuture<?> scheduledFuture = Objects.requireNonNull(registrar.getScheduler())
+                ScheduledFuture<?> scheduledFuture = registrar.getScheduler()
                         .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
                 scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
-                jobMap.put(job.getJobKey(), job);
                 logger.info("启用定时任务:{}", job);
-            } else {
-                stopTask(job.getJobKey());
             }
+            jobMap.put(job.getJobKey(), job);
         });
         logger.info("加载easyjob定时任务成功");
     }
 
+    public boolean startTask(String jobKey) {
+        if (!this.initialized) {
+            return false;
+        }
+        Preconditions.checkState(jobMap.containsKey(jobKey), "定时任务jobKey：" + jobKey + "没有注册");
+        Preconditions.checkState(!scheduledFutureMap.containsKey(jobKey), "定时任务jobKey:" + jobKey + "已经启动");
+        SchedulingJob job = jobMap.get(jobKey);
+        ScheduledFuture<?> scheduledFuture = registrar.getScheduler()
+                .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
+        scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
+        return true;
+    }
+
     public boolean stopTask(String jobKey) {
+        if (!this.initialized) {
+            return false;
+        }
         ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(jobKey);
         if (Objects.nonNull(scheduledFuture)
                 && !scheduledFuture.isCancelled()
                 && !scheduledFuture.isDone()) {
             scheduledFutureMap.remove(jobKey);
-            jobMap.remove(jobKey);
             boolean result = scheduledFuture.cancel(true);
             logger.info("停用easyjob定时任务:{}", jobKey);
             return result;
         }
         return false;
+    }
+
+    public boolean updateTask(SchedulingConfig config) {
+        if (!this.initialized) {
+            return false;
+        }
+        Preconditions.checkArgument(jobMap.containsKey(config.getJobKey()), "定时任务jobKey：" + config.getJobKey() + "不存在");
+        Preconditions.checkArgument(CronExpression.isValidExpression(config.getCron()), "定时任务cron：" + config.getCron() + "表达式不合法");
+        SchedulingJob job = jobMap.get(config.getJobKey());
+        if (config.isEnabled()) {
+            job.enable();
+        } else {
+            job.disable();
+        }
+        if (config.isLogEnabled()) {
+            job.logEnable();
+        } else {
+            job.logDisable();
+        }
+        job.setJobName(config.getJobName());
+        job.setJobParams(config.getJobParams());
+        job.setCron(config.getCron());
+        ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(config.getJobKey());
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+            if(job.enabled()){
+                scheduledFuture = registrar.getScheduler()
+                        .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
+                scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
+            }
+        } else {
+            if(job.enabled()){
+                scheduledFuture = registrar.getScheduler()
+                        .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
+                scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
+            }
+        }
+        jobMap.put(job.getJobKey(), job);
+        logger.info("更新定时任务:{}", job);
+        return true;
+    }
+
+    public boolean deleteTask(String jobKey) {
+        if (!this.initialized) {
+            return false;
+        }
+        Preconditions.checkArgument(jobMap.containsKey(jobKey), "定时任务jobKey：" + jobKey + "不存在");
+        ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(jobKey);
+        if (Objects.nonNull(scheduledFuture)) {
+            scheduledFuture.cancel(true);
+        }
+        scheduledFutureMap.remove(jobKey);
+        logger.info("删除定时任务：{}", jobKey);
+        return true;
     }
 
     public void clear() {

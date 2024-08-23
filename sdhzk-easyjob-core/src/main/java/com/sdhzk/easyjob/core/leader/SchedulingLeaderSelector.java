@@ -31,7 +31,6 @@ public class SchedulingLeaderSelector extends LeaderSelectorAdapter {
         } catch (Exception ex) {
             logger.error("启动SchedulingManager失败", ex);
         }
-
     }
 
     @Override
@@ -42,6 +41,5 @@ public class SchedulingLeaderSelector extends LeaderSelectorAdapter {
         } catch (Exception ex) {
             logger.error("SchedulingManager清除全部定时任务失败", ex);
         }
-
     }
 }

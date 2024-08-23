@@ -42,6 +42,10 @@ public abstract class LeaderSelectorAdapter implements Closeable, LeaderLatchLis
         this.leaderSelector.start();
     }
 
+    public boolean hasLeadership() {
+        return this.leaderSelector.hasLeadership();
+    }
+
     @Override
     public void close() {
         this.leaderSelector.close();

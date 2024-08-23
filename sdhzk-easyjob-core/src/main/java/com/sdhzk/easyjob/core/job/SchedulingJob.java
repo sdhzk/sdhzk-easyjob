@@ -21,4 +21,18 @@ public interface SchedulingJob extends Runnable {
     boolean enabled();
 
     boolean logEnabled();
+
+    void setJobName(String jobName);
+
+    void setCron(String cron);
+
+    void setJobParams(Map<String, Object> jobParams);
+
+    void enable();
+
+    void disable();
+
+    void logDisable();
+
+    void logEnable();
 }

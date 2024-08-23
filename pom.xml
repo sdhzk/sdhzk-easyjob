@@ -40,6 +40,11 @@
                 <version>${curator.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-x-async</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>net.dreamlu</groupId>
                 <artifactId>mica-auto</artifactId>
                 <version>${mica.auto.version}</version>
