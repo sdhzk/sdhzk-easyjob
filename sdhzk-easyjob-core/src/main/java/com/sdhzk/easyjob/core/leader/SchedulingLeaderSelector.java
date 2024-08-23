@@ -25,6 +25,7 @@ public class SchedulingLeaderSelector extends LeaderSelectorAdapter {
 
     @Override
     public void isLeader() {
+        schedulingManager.setLeadership(true);
         logger.info("easyjob当前节点被选举为leader");
         try {
             schedulingManager.start();
@@ -35,6 +36,7 @@ public class SchedulingLeaderSelector extends LeaderSelectorAdapter {
 
     @Override
     public void notLeader() {
+        schedulingManager.setLeadership(false);
         logger.info("easyjob当前节点放弃leader");
         try {
             schedulingManager.clear();

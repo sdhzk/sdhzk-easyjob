@@ -57,6 +57,7 @@ public class EasyJobAutoConfiguration {
             throw new IllegalStateException("SchedulingJobLoader不能为空");
         }
         SchedulingManager schedulingManager = new SchedulingManager();
+        schedulingManager.setClutered(properties.getCluster().getEnabled());
         schedulingManager.setSchedulingJobLoader(schedulingJobLoader.getIfAvailable());
         if (properties.getThreadPool().getCorePoolSize() != null) {
             if (properties.getThreadPool().getCorePoolSize() < 1) {

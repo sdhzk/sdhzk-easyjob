@@ -33,8 +33,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     private SchedulingJobLoader schedulingJobLoader;
     private CountDownLatch waitForInit = new CountDownLatch(1);
     private volatile boolean initialized = false;
-
-    private boolean needStarted = false;
+    private volatile boolean clutered = false;
+    private volatile boolean leadership = false;
 
     private int corePoolSize = 8;
     private int maxPoolSize = 8;
@@ -72,12 +72,20 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         this.schedulingJobLoader = schedulingJobLoader;
     }
 
-    public boolean isNeedStarted() {
-        return needStarted;
+    public boolean isClutered() {
+        return clutered;
     }
 
-    public void setNeedStarted(boolean needStarted) {
-        this.needStarted = needStarted;
+    public void setClutered(boolean clutered) {
+        this.clutered = clutered;
+    }
+
+    public boolean isLeadership() {
+        return leadership;
+    }
+
+    public void setLeadership(boolean leadership) {
+        this.leadership = leadership;
     }
 
     @Override
@@ -85,7 +93,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         registrar.setScheduler(new ConcurrentTaskScheduler(newScheduledExecutor()));
         this.registrar = registrar;
         waitForInit.countDown();
-        if (this.needStarted) {
+        if (!this.isClutered()) {
             this.start();
         }
     }
@@ -102,6 +110,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public void start() {
+        clusterCheckLeadship("不能启动SchedulingManager");
         if (!initialized) {
             try {
                 waitForInit.await();
@@ -132,9 +141,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public boolean startTask(String jobKey) {
-        if (!this.initialized) {
-            return false;
-        }
+        clusterCheckLeadship("不能启动定时任务");
+        Preconditions.checkState(initialized, "SchedulingManager初始化未完成");
         Preconditions.checkState(jobMap.containsKey(jobKey), "定时任务jobKey：" + jobKey + "没有注册");
         Preconditions.checkState(!scheduledFutureMap.containsKey(jobKey), "定时任务jobKey:" + jobKey + "已经启动");
         SchedulingJob job = jobMap.get(jobKey);
@@ -145,9 +153,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public boolean stopTask(String jobKey) {
-        if (!this.initialized) {
-            return false;
-        }
+        clusterCheckLeadship("不能停止定时任务");
+        Preconditions.checkState(initialized, "SchedulingManager初始化未完成");
         ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(jobKey);
         if (Objects.nonNull(scheduledFuture)
                 && !scheduledFuture.isCancelled()
@@ -161,9 +168,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public boolean updateTask(SchedulingConfig config) {
-        if (!this.initialized) {
-            return false;
-        }
+        clusterCheckLeadship("不能更新定时任务");
+        Preconditions.checkState(initialized, "SchedulingManager初始化未完成");
         Preconditions.checkArgument(jobMap.containsKey(config.getJobKey()), "定时任务jobKey：" + config.getJobKey() + "不存在");
         Preconditions.checkArgument(CronExpression.isValidExpression(config.getCron()), "定时任务cron：" + config.getCron() + "表达式不合法");
         SchedulingJob job = jobMap.get(config.getJobKey());
@@ -183,13 +189,13 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(config.getJobKey());
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
-            if(job.enabled()){
+            if (job.enabled()) {
                 scheduledFuture = registrar.getScheduler()
                         .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
                 scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
             }
         } else {
-            if(job.enabled()){
+            if (job.enabled()) {
                 scheduledFuture = registrar.getScheduler()
                         .schedule(job, triggerContext -> new CronTrigger(job.getCron()).nextExecution(triggerContext));
                 scheduledFutureMap.put(job.getJobKey(), scheduledFuture);
@@ -201,9 +207,8 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public boolean deleteTask(String jobKey) {
-        if (!this.initialized) {
-            return false;
-        }
+        clusterCheckLeadship("不能删除定时任务");
+        Preconditions.checkState(initialized, "SchedulingManager初始化未完成");
         Preconditions.checkArgument(jobMap.containsKey(jobKey), "定时任务jobKey：" + jobKey + "不存在");
         ScheduledFuture<?> scheduledFuture = scheduledFutureMap.get(jobKey);
         if (Objects.nonNull(scheduledFuture)) {
@@ -212,6 +217,12 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         scheduledFutureMap.remove(jobKey);
         logger.info("删除定时任务：{}", jobKey);
         return true;
+    }
+
+    private void clusterCheckLeadship(String msg) {
+        if (clutered && !leadership) {
+            throw new IllegalStateException("当前节点不是leader节点，" + msg);
+        }
     }
 
     public void clear() {
@@ -224,7 +235,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     }
 
     public boolean hasJob(String jobKey) {
-        return scheduledFutureMap.containsKey(jobKey);
+        return jobMap.containsKey(jobKey);
     }
 
     public void refresh() {

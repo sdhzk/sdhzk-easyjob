@@ -26,18 +26,28 @@ public class SchedulingConfigListener implements ModeledCacheListener<Scheduling
         switch (type) {
             case NODE_ADDED:
                 logger.info("添加定时任务配置：{}", config);
-                schedulingManager.updateTask(config);
+                if (isLeadership()) {
+                    schedulingManager.updateTask(config);
+                }
                 break;
             case NODE_UPDATED:
                 logger.info("更新定时任务配置：{}", config);
-                schedulingManager.updateTask(config);
+                if (isLeadership()) {
+                    schedulingManager.updateTask(config);
+                }
                 break;
             case NODE_REMOVED:
                 logger.info("删除定时任务配置：{}", config);
-                schedulingManager.deleteTask(config.getJobKey());
+                if (isLeadership()) {
+                    schedulingManager.deleteTask(config.getJobKey());
+                }
                 break;
             default:
                 break;
         }
+    }
+
+    private boolean isLeadership() {
+        return schedulingManager.isLeadership();
     }
 }
