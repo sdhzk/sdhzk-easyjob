@@ -41,11 +41,10 @@ public class MyAppSchedulingJobLoader implements SchedulingJobLoader {
     @Override
     public List<SchedulingJob> load() {
         MyJob myJob = new MyJob();
-        myJob.setJobKey("MyJob");
         myJob.setJobName("MyJob");
         myJob.setJobParams(null);
         myJob.setCron("0/10 * * * * ?");
-        myJob.setStatus(true);
+        myJob.setEnabled(true);
         myJob.setLogEnabled(true);
         return List.of(myJob);
     }
