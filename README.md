@@ -1,10 +1,6 @@
 # 基于springboot+zk的简单分布式任务
 
----
-
 ## 示例
-
----
 
 参考sdhzk-easyjob-samples项目
 
