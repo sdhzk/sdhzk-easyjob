@@ -5,10 +5,10 @@ import com.sdhzk.easyjob.core.job.SchedulingJob;
 import java.util.List;
 
 /**
- * 定时任务Loader
+ * 定时任务Loader监听器
  *
  * @author Linus.Lee
  */
-public interface SchedulingJobLoader {
-    List<SchedulingJob> load();
+public interface SchedulingJobLoaderListener {
+    void onLoaded(List<SchedulingJob> jobs);
 }

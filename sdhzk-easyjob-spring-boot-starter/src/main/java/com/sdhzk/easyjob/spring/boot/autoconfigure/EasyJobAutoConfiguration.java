@@ -8,6 +8,8 @@ import com.sdhzk.easyjob.core.config.impl.DefaultSchedulingConfigServiceImpl;
 import com.sdhzk.easyjob.core.config.impl.ZkSchedulingConfigServiceImpl;
 import com.sdhzk.easyjob.core.leader.SchedulingLeaderSelector;
 import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
+import com.sdhzk.easyjob.core.loader.SchedulingJobLoaderListener;
+import com.sdhzk.easyjob.core.loader.impl.ZkSchedulingJobLoaderListener;
 import com.sdhzk.easyjob.core.log.SchedulingLogEventListener;
 import com.sdhzk.easyjob.core.log.SchedulingLogProcessor;
 import com.sdhzk.easyjob.core.manager.SchedulingManager;
@@ -52,6 +54,8 @@ public class EasyJobAutoConfiguration {
     @ConditionalOnMissingBean(SchedulingManager.class)
     @Bean
     public SchedulingManager schedulingManager(EasyJobProperties properties,
+                                               ModeledFramework<SchedulingConfig> modeledClient,
+                                               SchedulingConfigService schedulingConfigService,
                                                ObjectProvider<SchedulingJobLoader> schedulingJobLoader) {
         if (schedulingJobLoader.getIfAvailable() == null) {
             throw new IllegalStateException("SchedulingJobLoader不能为空");
@@ -81,6 +85,14 @@ public class EasyJobAutoConfiguration {
             }
             schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
         }
+
+        if(schedulingManager.isClustered()){
+            CachedModeledFramework<SchedulingConfig> cached = modeledClient.cached();
+            cached.listenable().addListener(new SchedulingConfigListener(schedulingManager));
+            cached.start();
+            schedulingManager.setSchedulingJobLoaderListener(new ZkSchedulingJobLoaderListener(schedulingConfigService));
+        }
+
         return schedulingManager;
     }
 
@@ -124,15 +136,11 @@ public class EasyJobAutoConfiguration {
     )
     @Bean
     public ModeledFramework<SchedulingConfig> modeledClient(EasyJobProperties properties,
-                                                            CuratorFramework client,
-                                                            SchedulingManager schedulingManager) {
+                                                            CuratorFramework client) {
         JacksonModelSerializer<SchedulingConfig> serializer = JacksonModelSerializer.build(SchedulingConfig.class);
         ZPath path = ZPath.parseWithIds(EasyJobConst.DEFAULT_CONFIG_PATH + "/" + properties.getCluster().getName() + "/" + properties.getCluster().getAppId());
         ModelSpec<SchedulingConfig> modelSpec = ModelSpec.builder(path, serializer).build();
         ModeledFramework<SchedulingConfig> modeledClient = ModeledFramework.wrap(AsyncCuratorFramework.wrap(client), modelSpec);
-        CachedModeledFramework<SchedulingConfig> cached = modeledClient.cached();
-        cached.listenable().addListener(new SchedulingConfigListener(schedulingManager));
-        cached.start();
         logger.info("启动easyjob定时任务配置监听器");
         return modeledClient;
     }

@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sdhzk.easyjob.core.config.SchedulingConfig;
 import com.sdhzk.easyjob.core.job.SchedulingJob;
 import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
+import com.sdhzk.easyjob.core.loader.SchedulingJobLoaderListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -32,6 +33,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     private final Map<String, SchedulingJob> jobMap = Maps.newConcurrentMap();
     private ScheduledTaskRegistrar registrar;
     private SchedulingJobLoader schedulingJobLoader;
+    private SchedulingJobLoaderListener schedulingJobLoaderListener;
     private CountDownLatch waitForInit = new CountDownLatch(1);
     private volatile boolean initialized = false;
     private volatile boolean clustered = false;
@@ -71,6 +73,14 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
 
     public void setSchedulingJobLoader(SchedulingJobLoader schedulingJobLoader) {
         this.schedulingJobLoader = schedulingJobLoader;
+    }
+
+    public SchedulingJobLoaderListener getSchedulingJobLoaderListener() {
+        return schedulingJobLoaderListener;
+    }
+
+    public void setSchedulingJobLoaderListener(SchedulingJobLoaderListener schedulingJobLoaderListener) {
+        this.schedulingJobLoaderListener = schedulingJobLoaderListener;
     }
 
     public boolean isClustered() {
@@ -121,6 +131,9 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
             }
         }
         List<SchedulingJob> list = this.schedulingJobLoader.load();
+        if(this.schedulingJobLoaderListener != null) {
+            this.schedulingJobLoaderListener.onLoaded(list);
+        }
         if (CollectionUtils.isEmpty(list)) {
             clear();
             return;
