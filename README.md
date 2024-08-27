@@ -28,6 +28,22 @@ public class MyApp {
 }
 ```
 
+## 任务实现
+
+```java
+public class MyJob extends SchedulingJobAdapter {
+    @Override
+    public void execute() {
+        System.out.println("执行MyJob：" + LocalDateTime.now());
+    }
+
+    @Override
+    public String getJobKey() {
+        return "MyJob";
+    }
+}
+```
+
 ## 实现SchedulingJobLoader接口
 
 ```java
@@ -55,6 +71,43 @@ public class MyAppSchedulingLogProcessor implements SchedulingLogProcessor {
     @Override
     public void process(SchedulingLog log) {
         System.out.println("接收到日志：" + log);
+    }
+}
+```
+
+## 定时任务配置操作示例
+
+```java
+@RestController
+public class MyAppController {
+    @Resource
+    private SchedulingConfigService schedulingConfigService;
+
+    @Resource
+    private SchedulingManager schedulingManager;
+
+    @PostMapping("/update")
+    public String update(@RequestBody SchedulingConfig config) {
+        schedulingConfigService.update(config);
+        return "ok";
+    }
+
+    @PostMapping("/delete")
+    public String delete(String jobKey) {
+        schedulingConfigService.delete(jobKey);
+        return "ok";
+    }
+
+    @PostMapping("/stopTask")
+    public String stopTask(String jobKey) {
+        schedulingManager.stopTask(jobKey);
+        return "ok";
+    }
+
+    @PostMapping("/startTask")
+    public String startTask(String jobKey) {
+        schedulingManager.startTask(jobKey);
+        return "ok";
     }
 }
 ```
