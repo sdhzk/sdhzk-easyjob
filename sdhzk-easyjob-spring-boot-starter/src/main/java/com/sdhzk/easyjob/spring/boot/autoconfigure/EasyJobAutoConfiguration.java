@@ -1,5 +1,6 @@
 package com.sdhzk.easyjob.spring.boot.autoconfigure;
 
+import com.google.common.base.Strings;
 import com.sdhzk.easyjob.core.EasyJobConst;
 import com.sdhzk.easyjob.core.config.SchedulingConfig;
 import com.sdhzk.easyjob.core.config.SchedulingConfigListener;
@@ -54,8 +55,8 @@ public class EasyJobAutoConfiguration {
     @ConditionalOnMissingBean(SchedulingManager.class)
     @Bean
     public SchedulingManager schedulingManager(EasyJobProperties properties,
-                                               ModeledFramework<SchedulingConfig> modeledClient,
-                                               SchedulingConfigService schedulingConfigService,
+                                               ObjectProvider<ModeledFramework<SchedulingConfig>> modeledClient,
+                                               ObjectProvider<SchedulingConfigService> schedulingConfigService,
                                                ObjectProvider<SchedulingJobLoader> schedulingJobLoader) {
         if (schedulingJobLoader.getIfAvailable() == null) {
             throw new IllegalStateException("SchedulingJobLoader不能为空");
@@ -85,12 +86,11 @@ public class EasyJobAutoConfiguration {
             }
             schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
         }
-
         if(schedulingManager.isClustered()){
-            CachedModeledFramework<SchedulingConfig> cached = modeledClient.cached();
+            CachedModeledFramework<SchedulingConfig> cached = modeledClient.getIfAvailable().cached();
             cached.listenable().addListener(new SchedulingConfigListener(schedulingManager));
             cached.start();
-            schedulingManager.setSchedulingJobLoaderListener(new ZkSchedulingJobLoaderListener(schedulingConfigService));
+            schedulingManager.setSchedulingJobLoaderListener(new ZkSchedulingJobLoaderListener(schedulingConfigService.getIfAvailable()));
         }
 
         return schedulingManager;
@@ -122,7 +122,7 @@ public class EasyJobAutoConfiguration {
                                                              Environment env,
                                                              CuratorFramework client,
                                                              SchedulingManager schedulingManager) {
-        String leaderPath = EasyJobConst.DEFAULT_LEADER_PATH + properties.getCluster().getName() + "/" + properties.getCluster().getAppId();
+        String leaderPath = EasyJobConst.DEFAULT_LEADER_PATH + "/" + properties.getCluster().getName() + "/" + properties.getCluster().getAppId();
         String id = NetworkUtils.getPreferredIpAddress(properties.getPreferredNetworks()) + ":" + env.getProperty("server.port", "8080");
         SchedulingLeaderSelector leaderSelector = new SchedulingLeaderSelector(client, leaderPath, id, schedulingManager);
         leaderSelector.start();

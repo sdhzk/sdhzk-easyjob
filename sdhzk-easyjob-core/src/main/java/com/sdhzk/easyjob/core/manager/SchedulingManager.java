@@ -3,6 +3,7 @@ package com.sdhzk.easyjob.core.manager;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sdhzk.easyjob.core.config.SchedulingConfig;
 import com.sdhzk.easyjob.core.job.SchedulingJob;
@@ -22,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.*;
 
 /**
@@ -38,6 +40,7 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
     private volatile boolean initialized = false;
     private volatile boolean clustered = false;
     private volatile boolean leadership = false;
+    private volatile boolean started = false;
 
     private int corePoolSize = 8;
     private int maxPoolSize = 8;
@@ -99,6 +102,10 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
         this.leadership = leadership;
     }
 
+    public boolean isStarted() {
+        return started;
+    }
+
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         registrar.setScheduler(new ConcurrentTaskScheduler(newScheduledExecutor()));
@@ -130,18 +137,19 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
                 throw new RuntimeException(e);
             }
         }
-        List<SchedulingJob> list = this.schedulingJobLoader.load();
-        if(this.schedulingJobLoaderListener != null) {
-            this.schedulingJobLoaderListener.onLoaded(list);
+        List<SchedulingJob> jobs = loadAndVerifyJobs();
+        if (this.schedulingJobLoaderListener != null) {
+            this.schedulingJobLoaderListener.onLoaded(jobs);
         }
-        if (CollectionUtils.isEmpty(list)) {
+        if (CollectionUtils.isEmpty(jobs)) {
             clear();
+            this.started = true;
             return;
         }
-        list.forEach(job -> {
+        jobs.forEach(job -> {
             if (job.enabled()) {
                 if (!CronExpression.isValidExpression(job.getCron())) {
-                    logger.warn("easyjob定时任务cron表达式不合法：{}", job);
+                    logger.warn("cron表达式不合法：{}", job);
                     return;
                 }
                 ScheduledTask scheduledTask = this.registrar.scheduleCronTask(new CronTask(job, job.getCron()));
@@ -150,8 +158,28 @@ public class SchedulingManager implements SchedulingConfigurer, DisposableBean {
             }
             jobMap.put(job.getJobKey(), job);
         });
+        this.started = true;
         logger.info("加载easyjob定时任务成功");
     }
+
+    private List<SchedulingJob> loadAndVerifyJobs() {
+        List<SchedulingJob> jobs = this.schedulingJobLoader.load();
+        if(CollectionUtils.isEmpty(jobs)){
+            return null;
+        }
+        Set<String> jobKeys = Sets.newHashSet();
+        for (SchedulingJob job : jobs) {
+            if(jobKeys.contains(job.getJobKey())){
+                throw new IllegalArgumentException("jobKey重复，jobKey：" + job.getJobKey());
+            }
+            if (!CronExpression.isValidExpression(job.getCron())) {
+                throw new IllegalArgumentException("cron表达式不合法，jobKey：" + job.getJobKey());
+            }
+            jobKeys.add(job.getJobKey());
+        }
+        return jobs;
+    }
+
 
     public boolean startTask(String jobKey) {
         clusterCheckLeadship("不能启动定时任务");
