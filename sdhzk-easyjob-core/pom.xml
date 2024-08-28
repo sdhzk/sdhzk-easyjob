@@ -7,6 +7,7 @@
         <groupId>com.sdhzk.easyjob</groupId>
         <artifactId>sdhzk-easyjob</artifactId>
         <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>sdhzk-easyjob-core</artifactId>
