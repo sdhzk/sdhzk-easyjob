@@ -6,9 +6,9 @@ easyjob:
     max-pool-size: 8
     keep-alive-seconds: 0
   cluster:
+    enabled: true
     name: mycloud
     app-id: myapp
-    enabled: true
   zk:
     connectionString: ${zk.connectionString}
     baseSleepTimeMs: 1000

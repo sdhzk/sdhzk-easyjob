@@ -9,12 +9,11 @@ import java.util.Enumeration;
  * @author Linus.Lee
  * @date 2024-8-20
  */
-public class NetworkUtils {
+public final class NetworkUtils {
 
     private NetworkUtils() {
 
     }
-
 
     public static String getPreferredIpAddress(String preferredNetworks) {
         try {

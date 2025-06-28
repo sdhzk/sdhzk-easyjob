@@ -1,6 +1,5 @@
 package com.sdhzk.easyjob.spring.boot.autoconfigure;
 
-import com.google.common.base.Strings;
 import com.sdhzk.easyjob.core.EasyJobConst;
 import com.sdhzk.easyjob.core.config.SchedulingConfig;
 import com.sdhzk.easyjob.core.config.SchedulingConfigListener;
@@ -9,7 +8,6 @@ import com.sdhzk.easyjob.core.config.impl.DefaultSchedulingConfigServiceImpl;
 import com.sdhzk.easyjob.core.config.impl.ZkSchedulingConfigServiceImpl;
 import com.sdhzk.easyjob.core.leader.SchedulingLeaderSelector;
 import com.sdhzk.easyjob.core.loader.SchedulingJobLoader;
-import com.sdhzk.easyjob.core.loader.SchedulingJobLoaderListener;
 import com.sdhzk.easyjob.core.loader.impl.ZkSchedulingJobLoaderListener;
 import com.sdhzk.easyjob.core.log.SchedulingLogEventListener;
 import com.sdhzk.easyjob.core.log.SchedulingLogProcessor;
@@ -28,25 +26,27 @@ import org.apache.curator.x.async.modeled.cached.CachedModeledFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.util.Objects;
 
 /**
  * @author Linus.Lee
  * @date 2024-8-20
  */
-@Configuration(
-        proxyBeanMethods = false
-)
 @ConditionalOnProperty(
         name = "easyjob.enabled",
-        matchIfMissing = true,
-        havingValue = "true"
+        havingValue = "true",
+        matchIfMissing = true
 )
+@EnableScheduling
+@AutoConfiguration
 @EnableConfigurationProperties(EasyJobProperties.class)
 public class EasyJobAutoConfiguration {
 
@@ -64,30 +64,15 @@ public class EasyJobAutoConfiguration {
         SchedulingManager schedulingManager = new SchedulingManager();
         schedulingManager.setClustered(properties.getCluster().getEnabled());
         schedulingManager.setSchedulingJobLoader(schedulingJobLoader.getIfAvailable());
-        if (properties.getThreadPool().getCorePoolSize() != null) {
-            if (properties.getThreadPool().getCorePoolSize() < 1) {
-                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize必须大于0");
+        schedulingManager.setCorePoolSize(properties.getThreadPool().getCorePoolSize());
+        schedulingManager.setMaxPoolSize(properties.getThreadPool().getMaxPoolSize());
+        schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
+        if (schedulingManager.isClustered()) {
+            ModeledFramework<SchedulingConfig> modeledFramework = modeledClient.getIfAvailable();
+            if (Objects.isNull(modeledFramework)) {
+                throw new IllegalStateException("ModeledFramework未配置");
             }
-            schedulingManager.setCorePoolSize(properties.getThreadPool().getCorePoolSize());
-        }
-        if (properties.getThreadPool().getMaxPoolSize() != null) {
-            if (properties.getThreadPool().getMaxPoolSize() < 1) {
-                throw new IllegalArgumentException("easyjob.thread-pool.maxPoolSize必须大于0");
-            }
-            if (properties.getThreadPool().getCorePoolSize() != null
-                    && properties.getThreadPool().getCorePoolSize() > properties.getThreadPool().getMaxPoolSize()) {
-                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize不能大于easyjob.thread-pool.maxPoolSize");
-            }
-            schedulingManager.setMaxPoolSize(properties.getThreadPool().getMaxPoolSize());
-        }
-        if (properties.getThreadPool().getKeepAliveSeconds() != null) {
-            if (properties.getThreadPool().getKeepAliveSeconds() < 0) {
-                throw new IllegalArgumentException("easyjob.thread-pool.keepAliveSeconds不能是负数");
-            }
-            schedulingManager.setKeepAliveSeconds(properties.getThreadPool().getKeepAliveSeconds());
-        }
-        if(schedulingManager.isClustered()){
-            CachedModeledFramework<SchedulingConfig> cached = modeledClient.getIfAvailable().cached();
+            CachedModeledFramework<SchedulingConfig> cached = modeledFramework.cached();
             cached.listenable().addListener(new SchedulingConfigListener(schedulingManager));
             cached.start();
             schedulingManager.setSchedulingJobLoaderListener(new ZkSchedulingJobLoaderListener(schedulingConfigService.getIfAvailable()));
@@ -98,7 +83,8 @@ public class EasyJobAutoConfiguration {
 
     @ConditionalOnProperty(
             name = "easyjob.cluster.enabled",
-            matchIfMissing = true, havingValue = "true"
+            havingValue = "true",
+            matchIfMissing = true
     )
     @ConditionalOnMissingBean(CuratorFramework.class)
     @Bean(destroyMethod = "close")
@@ -114,7 +100,8 @@ public class EasyJobAutoConfiguration {
 
     @ConditionalOnProperty(
             name = "easyjob.cluster.enabled",
-            matchIfMissing = true, havingValue = "true"
+            havingValue = "true",
+            matchIfMissing = true
     )
     @ConditionalOnMissingBean(SchedulingLeaderSelector.class)
     @Bean(destroyMethod = "close")
@@ -132,7 +119,8 @@ public class EasyJobAutoConfiguration {
 
     @ConditionalOnProperty(
             name = "easyjob.cluster.enabled",
-            matchIfMissing = true, havingValue = "true"
+            havingValue = "true",
+            matchIfMissing = true
     )
     @Bean
     public ModeledFramework<SchedulingConfig> modeledClient(EasyJobProperties properties,
@@ -147,7 +135,8 @@ public class EasyJobAutoConfiguration {
 
     @ConditionalOnProperty(
             name = "easyjob.cluster.enabled",
-            matchIfMissing = true, havingValue = "true"
+            havingValue = "true",
+            matchIfMissing = true
     )
     @ConditionalOnMissingBean(SchedulingConfigService.class)
     @Bean
@@ -157,7 +146,8 @@ public class EasyJobAutoConfiguration {
 
     @ConditionalOnProperty(
             name = "easyjob.cluster.enabled",
-            matchIfMissing = true, havingValue = "false"
+            havingValue = "true",
+            matchIfMissing = true
     )
     @ConditionalOnMissingBean(SchedulingConfigService.class)
     @Bean

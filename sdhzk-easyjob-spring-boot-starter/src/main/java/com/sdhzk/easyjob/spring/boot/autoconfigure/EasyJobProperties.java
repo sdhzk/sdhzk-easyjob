@@ -1,20 +1,22 @@
 package com.sdhzk.easyjob.spring.boot.autoconfigure;
 
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
+ * easyjob配置
+ *
  * @author Linus.Lee
  * @date 2024-8-20
  */
 @ConfigurationProperties(prefix = "easyjob")
-public class EasyJobProperties {
+public class EasyJobProperties implements InitializingBean {
     private Boolean enabled = Boolean.TRUE;
     private String preferredNetworks;
     private ThreadPool threadPool = new ThreadPool();
     private Zk zk;
     private Cluster cluster = new Cluster();
-
 
     public Boolean getEnabled() {
         return enabled;
@@ -30,6 +32,29 @@ public class EasyJobProperties {
 
     public void setPreferredNetworks(String preferredNetworks) {
         this.preferredNetworks = preferredNetworks;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        if (this.threadPool.getCorePoolSize() != null) {
+            if (this.threadPool.getCorePoolSize() < 1) {
+                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize必须大于0");
+            }
+        }
+        if (this.threadPool.getMaxPoolSize() != null) {
+            if (this.threadPool.getMaxPoolSize() < 1) {
+                throw new IllegalArgumentException("easyjob.thread-pool.maxPoolSize必须大于0");
+            }
+            if (this.threadPool.getCorePoolSize() != null
+                    && this.threadPool.getCorePoolSize() > this.threadPool.getMaxPoolSize()) {
+                throw new IllegalArgumentException("easyjob.thread-pool.corePoolSize不能大于easyjob.thread-pool.maxPoolSize");
+            }
+        }
+        if (this.threadPool.getKeepAliveSeconds() != null) {
+            if (this.threadPool.getKeepAliveSeconds() < 0) {
+                throw new IllegalArgumentException("easyjob.thread-pool.keepAliveSeconds不能是负数");
+            }
+        }
     }
 
     public static class ThreadPool {
