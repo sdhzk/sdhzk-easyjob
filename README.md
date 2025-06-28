@@ -16,17 +16,6 @@
     </dependency>
 ```
 
-## 添加@EnableScheduling注解
-
-```java
-@SpringBootApplication
-public class MyApp {
-    public static void main(String[] args) {
-        SpringApplication.run(MyApp.class, args);
-    }
-}
-```
-
 ## 任务实现
 
 ```java
@@ -43,7 +32,7 @@ public class MyJob extends SchedulingJobAdapter {
 }
 ```
 
-## 实现SchedulingJobLoader接口
+## 实现SchedulingJobLoader接口，用于加载任务
 
 ```java
 @Component
@@ -62,7 +51,7 @@ public class MyAppSchedulingJobLoader implements SchedulingJobLoader {
 }
 ```
 
-## 实现SchedulingLogProcessor接口【可选】
+## 实现SchedulingLogProcessor接口【可选】，用于任务日志
 
 ```java
 @Component
