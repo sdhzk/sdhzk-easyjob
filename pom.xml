@@ -20,10 +20,11 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <revision>1.0.0</revision>
+        <flatten-maven-plugin.version>1.7.1</flatten-maven-plugin.version>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <mica.auto.version>3.1.4</mica.auto.version>
-        <curator.version>5.7.0</curator.version>
-        <spring.version>6.1.11</spring.version>
-        <spring.boot.version>3.3.2</spring.boot.version>
+        <curator.version>5.8.0</curator.version>
+        <spring.boot.version>3.5.3</spring.boot.version>
     </properties>
 
     <dependencyManagement>
@@ -70,7 +71,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>flatten-maven-plugin</artifactId>
-                    <version>1.6.0</version>
+                    <version>${flatten-maven-plugin.version}</version>
                     <configuration>
                         <!-- 避免IDE将 .flattened-pom.xml 自动识别为功能模块 -->
                         <flattenedPomFilename>pom-xml-flattened</flattenedPomFilename>
@@ -97,10 +98,10 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>${maven-compiler-plugin.version}</version>
                     <configuration>
-                        <source>17</source>
-                        <target>17</target>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
                         <compilerArgs>
                             <arg>-parameters</arg>
                         </compilerArgs>
@@ -119,7 +120,5 @@
             </plugin>
         </plugins>
     </build>
-
-
 
 </project>

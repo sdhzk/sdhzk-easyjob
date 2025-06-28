@@ -1,6 +1,6 @@
 easyjob:
   enabled: true
-  preferred-networks: 172.18.179
+  preferred-networks: 192.168.31
   thread-pool:
     core-pool-size: 8
     max-pool-size: 8

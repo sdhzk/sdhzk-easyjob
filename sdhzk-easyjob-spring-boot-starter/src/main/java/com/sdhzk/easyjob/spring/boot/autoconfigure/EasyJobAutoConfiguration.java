@@ -71,7 +71,7 @@ public class EasyJobAutoConfiguration {
             schedulingManager.setCorePoolSize(properties.getThreadPool().getCorePoolSize());
         }
         if (properties.getThreadPool().getMaxPoolSize() != null) {
-            if (properties.getThreadPool().getCorePoolSize() < 1) {
+            if (properties.getThreadPool().getMaxPoolSize() < 1) {
                 throw new IllegalArgumentException("easyjob.thread-pool.maxPoolSize必须大于0");
             }
             if (properties.getThreadPool().getCorePoolSize() != null
