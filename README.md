@@ -19,7 +19,6 @@
 ## 添加@EnableScheduling注解
 
 ```java
-@EnableScheduling
 @SpringBootApplication
 public class MyApp {
     public static void main(String[] args) {
